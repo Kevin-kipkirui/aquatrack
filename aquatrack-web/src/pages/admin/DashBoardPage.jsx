@@ -19,11 +19,7 @@ import {
 } from 'lucide-react';
 import { ROUTES } from '../../config/routes';
 import { useAuth } from '../../auth/AuthProvider';
-
-// ---------------------------------------------------------------------------
-// Config
-// ---------------------------------------------------------------------------
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { supabase } from '../../lib/supabase';
 
 // In development, show sample figures when the API is unreachable so the layout
 // can be judged. Never shown in production builds.
@@ -90,18 +86,17 @@ export default function DashboardPage() {
     if (!session?.access_token) return;
     setLoading(true);
     setError('');
-    try {
-      const res = await fetch(`${API_BASE_URL}/dashboard/summary`, {
-        headers: { Authorization: `Bearer ${session.access_token}` },
-      });
-      if (!res.ok) throw new Error(`The server answered with status ${res.status}.`);
-      setData(await res.json());
-    } catch (err) {
+
+    const { data: result, error: rpcError } = await supabase.rpc('dashboard_summary');
+
+    if (rpcError) {
       setData(null);
-      setError(err.message || 'Could not reach the server.');
-    } finally {
-      setLoading(false);
+      setError(rpcError.message);
+    } else {
+      setData(result);
     }
+
+    setLoading(false);
   }, [session?.access_token]);
 
   useEffect(() => {
@@ -266,10 +261,7 @@ export default function DashboardPage() {
               <AlertTriangle className="mt-0.5 size-4 shrink-0" />
               <div>
                 <p className="font-semibold">Could not load the dashboard figures</p>
-                <p>
-                  {error} Check that the API is running and that VITE_API_BASE_URL is set, then
-                  press Refresh.
-                </p>
+                <p>{error}</p>
               </div>
             </div>
           )}

@@ -27,8 +27,7 @@ import {
 import { ROUTES } from '../../config/routes';
 import { ROLES } from '../../config/roles';
 import { useAuth } from '../../auth/AuthProvider';
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { supabase } from '../../lib/supabase';
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -69,7 +68,7 @@ function friendlyError(message) {
 // ---------------------------------------------------------------------------
 export default function RecruitFieldAgent() {
   const a = ROUTES.admin;
-  const { user, session, signOut } = useAuth();
+  const { user, signOut } = useAuth();
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -126,21 +125,24 @@ export default function RecruitFieldAgent() {
     setSubmitting(true);
     try {
       const normalizedPhone = normalizeKenyanPhone(phone);
-      const res = await fetch(`${API_BASE_URL}/users`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({
-          role: ROLES.AGENT,
+      const { error: fnError } = await supabase.functions.invoke('create-field-agent', {
+        body: {
           fullName: fullName.trim(),
           phone: normalizedPhone,
           password,
-        }),
+        },
       });
-      const body = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(body.error || `The server answered with status ${res.status}.`);
+
+      if (fnError) {
+        let message = fnError.message;
+        try {
+          const body = await fnError.context.json();
+          if (body?.error) message = body.error;
+        } catch {
+          // keep the generic message
+        }
+        throw new Error(message);
+      }
 
       setCreated({ fullName: fullName.trim(), phone: normalizedPhone, password });
     } catch (err) {
