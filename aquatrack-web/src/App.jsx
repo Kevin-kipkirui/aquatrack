@@ -9,10 +9,10 @@ const GatewayPage        = lazy(() => import('./pages/gateway/GatewayPage'));
 const AdminLoginPage     = lazy(() => import('./pages/auth/AdminLoginPage'));
 const AgentLoginPage     = lazy(() => import('./pages/auth/AgentLoginPage'));
 
-const DashboardPage      = lazy(() => import('./pages/admin/DashboardPage'));
+const DashboardPage      = lazy(() => import('./pages/admin/DashBoardPage'));
 const MeterReadingsPage  = lazy(() => import('./pages/admin/MeterReadingsPage'));
-const ReadingReviewPage  = lazy(() => import('./pages/admin/ReadingReviewPage'));
-const HouseholdsPage     = lazy(() => import('./pages/admin/HouseholdsPage'));
+const ReadingReviewPage  = lazy(() => import('./pages/admin/ReadingReviewsPage'));
+const HouseholdsPage     = lazy(() => import('./pages/admin/HouseHoldsPage'));
 const HouseholdFormPage  = lazy(() => import('./pages/admin/HouseholdFormPage'));
 const BillingPage        = lazy(() => import('./pages/admin/BillingPage'));
 const BillDetailPage     = lazy(() => import('./pages/admin/BillDetailPage'));
@@ -21,7 +21,7 @@ const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage')
 const SettingsPage       = lazy(() => import('./pages/admin/SettingsPage'));
 
 const AgentHomePage      = lazy(() => import('./pages/agent/AgentHomePage'));
-const CaptureReadingPage = lazy(() => import('./pages/agent/CaptureReadingPage'));
+const CaptureReadingPage = lazy(() => import('./pages/agent/CaptureReadingsPage'));
 const SyncQueuePage      = lazy(() => import('./pages/agent/SyncQueuePage'));
 const AgentProfilePage   = lazy(() => import('./pages/agent/AgentProfilePage'));
 
