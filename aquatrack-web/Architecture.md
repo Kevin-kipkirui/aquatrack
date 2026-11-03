@@ -88,4 +88,4 @@ Added later (not scaffolded yet): `components/`, `layouts/` (AdminLayout with si
 - Pages fetch via `src/api/*` modules (never `fetch` inline); the API client attaches the Supabase JWT as `Authorization: Bearer`.
 - Pages stay thin: layout + data wiring. Reusable UI goes in `components/`.
 - Agent pages are mobile-first (phone width); admin pages are desktop-first and responsive.
-- Env vars: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`, `VITE_API_BASE_URL`.
+- Env vars: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`.
