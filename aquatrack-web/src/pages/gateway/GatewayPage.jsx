@@ -2,6 +2,8 @@ import { Link } from 'react-router-dom';
 import { AlertTriangle, ChevronRight, LayoutDashboard, Receipt, Smartphone, WifiOff } from 'lucide-react';
 import { ROUTES } from '../../config/routes';
 
+const BRAND_IMAGE_URL = 'https://i.pinimg.com/736x/0d/32/4c/0d324cbc522f0c1f9883bc00b2d3f27f.jpg';
+
 const FEATURES = [
   { icon: WifiOff, text: 'Readings captured offline sync automatically once the connection returns.' },
   { icon: AlertTriangle, text: 'Duplicate readings are flagged at the point of capture, not weeks later.' },
@@ -29,7 +31,24 @@ export default function GatewayPage() {
   return (
     <div className="grid min-h-screen font-sans text-slate-800 lg:grid-cols-2">
       {/* ------------------------------ Brand panel ------------------------------ */}
-      <section className="flex flex-col justify-between bg-navy-900 px-6 py-8 text-white sm:px-10 lg:px-14 lg:py-14">
+      <section className="relative isolate flex flex-col justify-between overflow-hidden bg-navy-900 px-6 py-8 text-white sm:px-10 lg:px-14 lg:py-14">
+        {/* Background photo: always fills the panel. If it fails to load, the navy background remains. */}
+        <img
+          src={BRAND_IMAGE_URL}
+          alt=""
+          aria-hidden="true"
+          referrerPolicy="no-referrer"
+          onError={(e) => {
+            e.currentTarget.style.display = 'none';
+          }}
+          className="absolute inset-0 -z-20 h-full w-full object-cover object-center"
+        />
+        {/* Dark overlay keeps the text readable while the photo still shows through. */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 -z-10 bg-gradient-to-t from-navy-900/95 via-navy-900/70 to-navy-900/50"
+        />
+
         <div className="flex items-center gap-3">
           <img src="/logo-mark.png" alt="" className="h-11 w-11 rounded-xl bg-white object-contain p-1.5" />
           <div className="leading-tight">
@@ -39,22 +58,22 @@ export default function GatewayPage() {
         </div>
 
         <div className="hidden lg:block">
-          <h1 className="max-w-md text-4xl font-extrabold leading-tight tracking-tight">
+          <h1 className="max-w-md text-4xl font-extrabold leading-tight tracking-tight drop-shadow-md">
             Accurate readings. Fair bills. Records everyone can trust.
           </h1>
           <ul className="mt-10 max-w-md space-y-5">
             {FEATURES.map(({ icon: Icon, text }) => (
               <li key={text} className="flex items-start gap-4">
-                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-navy-800 text-brand-200">
+                <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-navy-800/80 text-brand-200 backdrop-blur-sm">
                   <Icon className="size-5" />
                 </span>
-                <p className="pt-1.5 text-sm leading-relaxed text-slate-300">{text}</p>
+                <p className="pt-1.5 text-sm leading-relaxed text-slate-100 drop-shadow">{text}</p>
               </li>
             ))}
           </ul>
         </div>
 
-        <p className="hidden text-xs text-slate-400 lg:block">
+        <p className="hidden text-xs text-slate-300 lg:block">
           Smart Water Usage Tracking and Billing System
         </p>
       </section>
