@@ -16,6 +16,7 @@ export const ROUTES = {
     billDetail: (id = ':billId') => `/admin/billing/${id}`,
     reports: '/admin/reports',
     users: '/admin/users',
+    recruitAgent: '/admin/recruit-agent',
     settings: '/admin/settings',
   },
 

@@ -18,6 +18,7 @@ const BillingPage        = lazy(() => import('./pages/admin/BillingPage'));
 const BillDetailPage     = lazy(() => import('./pages/admin/BillDetailPage'));
 const ReportsPage        = lazy(() => import('./pages/admin/ReportsPage'));
 const UserManagementPage = lazy(() => import('./pages/admin/UserManagementPage'));
+const RecruitFieldAgent  = lazy(() => import('./pages/admin/RecruitFieldAgent'));
 const SettingsPage       = lazy(() => import('./pages/admin/SettingsPage'));
 
 const AgentHomePage      = lazy(() => import('./pages/agent/AgentHomePage'));
@@ -61,6 +62,7 @@ export default function App() {
           <Route path={ROUTES.admin.billDetail()} element={<BillDetailPage />} />
           <Route path={ROUTES.admin.reports} element={<ReportsPage />} />
           <Route path={ROUTES.admin.users} element={<UserManagementPage />} />
+          <Route path={ROUTES.admin.recruitAgent} element={<RecruitFieldAgent />} />
           <Route path={ROUTES.admin.settings} element={<SettingsPage />} />
         </Route>
 
