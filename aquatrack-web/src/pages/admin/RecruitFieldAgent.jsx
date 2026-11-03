@@ -11,8 +11,8 @@ import {
   Loader2,
   Lock,
   LogOut,
+  Mail,
   Menu,
-  Phone,
   Receipt,
   RefreshCw,
   Settings,
@@ -32,16 +32,8 @@ import { supabase } from '../../lib/supabase';
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
-// Accepts 0712345678, 712345678, 254712345678 or +254712345678 -> +254712345678
-function normalizeKenyanPhone(input) {
-  const digits = input.replace(/\D/g, '');
-  if (digits.startsWith('254')) return `+${digits}`;
-  if (digits.startsWith('0')) return `+254${digits.slice(1)}`;
-  return `+254${digits}`;
-}
-
-function isValidKenyanPhone(input) {
-  return /^\+254[17]\d{8}$/.test(normalizeKenyanPhone(input));
+function isValidEmail(input) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.trim());
 }
 
 // 10 characters, no look-alikes (0/O, 1/l/I), generated with the browser's crypto.
@@ -55,7 +47,7 @@ function generatePassword(length = 10) {
 function friendlyError(message) {
   const msg = (message || '').toLowerCase();
   if (msg.includes('already') && (msg.includes('registered') || msg.includes('exists'))) {
-    return 'A user with this phone number already exists. Check the number, or look for the agent under User Management.';
+    return 'A user with this email already exists. Check the address, or look for the agent under User Management.';
   }
   if (msg.includes('failed to fetch') || msg.includes('network')) {
     return 'Can’t reach the server. Check your internet connection and try again.';
@@ -73,12 +65,12 @@ export default function RecruitFieldAgent() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const [fullName, setFullName] = useState('');
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState(() => generatePassword());
   const [showPassword, setShowPassword] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
-  const [created, setCreated] = useState(null); // { fullName, phone, password }
+  const [created, setCreated] = useState(null); // { fullName, email, password }
   const [copied, setCopied] = useState('');
 
   const adminName =
@@ -113,8 +105,8 @@ export default function RecruitFieldAgent() {
       setError('Enter the agent’s full name.');
       return;
     }
-    if (!isValidKenyanPhone(phone)) {
-      setError('Enter a valid Kenyan phone number, for example 0712 345 678.');
+    if (!isValidEmail(email)) {
+      setError('Enter a valid email address, for example agent@example.com.');
       return;
     }
     if (password.length < 8) {
@@ -124,11 +116,11 @@ export default function RecruitFieldAgent() {
 
     setSubmitting(true);
     try {
-      const normalizedPhone = normalizeKenyanPhone(phone);
+      const normalizedEmail = email.trim().toLowerCase();
       const { error: fnError } = await supabase.functions.invoke('create-field-agent', {
         body: {
           fullName: fullName.trim(),
-          phone: normalizedPhone,
+          email: normalizedEmail,
           password,
         },
       });
@@ -144,7 +136,7 @@ export default function RecruitFieldAgent() {
         throw new Error(message);
       }
 
-      setCreated({ fullName: fullName.trim(), phone: normalizedPhone, password });
+      setCreated({ fullName: fullName.trim(), email: normalizedEmail, password });
     } catch (err) {
       setError(friendlyError(err.message));
     } finally {
@@ -154,7 +146,7 @@ export default function RecruitFieldAgent() {
 
   function recruitAnother() {
     setFullName('');
-    setPhone('');
+    setEmail('');
     setPassword(generatePassword());
     setShowPassword(true);
     setError('');
@@ -273,7 +265,7 @@ export default function RecruitFieldAgent() {
 
                   <dl className="mt-6 divide-y divide-slate-100 rounded-xl border border-brand-100 bg-brand-50">
                     {[
-                      { key: 'phone', label: 'Phone number', value: created.phone },
+                      { key: 'email', label: 'Email', value: created.email },
                       { key: 'password', label: 'Temporary password', value: created.password },
                     ].map(({ key, label, value }) => (
                       <div key={key} className="flex items-center justify-between gap-3 px-4 py-3">
@@ -345,25 +337,25 @@ export default function RecruitFieldAgent() {
                     </div>
 
                     <div>
-                      <label htmlFor="phone" className="block text-sm font-semibold text-navy-900">
-                        Phone number
+                      <label htmlFor="email" className="block text-sm font-semibold text-navy-900">
+                        Email
                       </label>
                       <div className="relative mt-1.5">
-                        <Phone className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-slate-400" />
+                        <Mail className="pointer-events-none absolute left-3.5 top-1/2 size-[18px] -translate-y-1/2 text-slate-400" />
                         <input
-                          id="phone"
-                          type="tel"
-                          inputMode="tel"
+                          id="email"
+                          type="email"
+                          inputMode="email"
                           autoComplete="off"
                           required
-                          value={phone}
-                          onChange={(e) => setPhone(e.target.value)}
-                          placeholder="0712 345 678"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          placeholder="agent@example.com"
                           className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-11 pr-4 text-sm text-slate-900 placeholder:text-slate-400 focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-100"
                         />
                       </div>
                       <p className="mt-1.5 text-xs text-slate-500">
-                        The agent signs in with this number, so double-check it.
+                        The agent signs in with this email, so double-check it.
                       </p>
                     </div>
 
@@ -407,7 +399,7 @@ export default function RecruitFieldAgent() {
 
                   <button
                     type="submit"
-                    disabled={submitting || !fullName || !phone || !password}
+                    disabled={submitting || !fullName || !email || !password}
                     className="mt-7 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition-colors hover:bg-navy-900 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
                   >
                     {submitting ? <Loader2 className="size-4 animate-spin" /> : <UserPlus className="size-4" />}

@@ -28,9 +28,10 @@ Deno.serve(async (req) => {
     }
 
     // 2. Validate input.
-    const { fullName, phone, password } = await req.json();
+    const { fullName, email: rawEmail, password } = await req.json();
+    const email = String(rawEmail ?? '').trim().toLowerCase();
     if (!fullName || String(fullName).trim().length < 2) return json({ error: 'Enter the agent’s full name.' }, 400);
-    if (!/^\+254[17]\d{8}$/.test(phone ?? '')) return json({ error: 'Enter a valid Kenyan phone number.' }, 400);
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ error: 'Enter a valid email address.' }, 400);
     if (!password || password.length < 8) return json({ error: 'Password must be at least 8 characters.' }, 400);
 
     // 3. Create the agent with the service-role key (never leaves the server).
@@ -39,9 +40,9 @@ Deno.serve(async (req) => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
     const { data, error } = await admin.auth.admin.createUser({
-      phone,
+      email,
       password,
-      phone_confirm: true,
+      email_confirm: true,
       app_metadata: { role: 'field_officer' },
       user_metadata: { full_name: String(fullName).trim() },
     });

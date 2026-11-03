@@ -1,26 +1,18 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Eye, EyeOff, Loader2, Lock, Phone, TriangleAlert } from 'lucide-react';
+import { ArrowLeft, Eye, EyeOff, Loader2, Lock, Mail, TriangleAlert } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider';
 import { ROLES } from '../../config/roles';
 import { ROUTES } from '../../config/routes';
 
-// Accepts 0712345678, 712345678, 254712345678 or +254712345678 and returns +254712345678.
-function normalizeKenyanPhone(input) {
-  const digits = input.replace(/\D/g, '');
-  if (digits.startsWith('254')) return `+${digits}`;
-  if (digits.startsWith('0')) return `+254${digits.slice(1)}`;
-  return `+254${digits}`;
-}
-
-function isValidKenyanPhone(input) {
-  return /^\+254[17]\d{8}$/.test(normalizeKenyanPhone(input));
+function isValidEmail(input) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.trim());
 }
 
 function friendlyError(error) {
   const msg = (error?.message || '').toLowerCase();
   if (msg.includes('invalid login credentials')) {
-    return 'The phone number or password is incorrect. Check them and try again.';
+    return 'The email or password is incorrect. Check them and try again.';
   }
   if (msg.includes('failed to fetch') || msg.includes('network') || error?.status === 0) {
     return 'Can’t reach the server. Check your mobile data or Wi-Fi and try again.';
@@ -29,10 +21,10 @@ function friendlyError(error) {
 }
 
 export default function AgentLoginPage() {
-  const { user, role, loading: authLoading, signInWithPhone, signOut } = useAuth();
+  const { user, role, loading: authLoading, signInWithEmail, signOut } = useAuth();
   const navigate = useNavigate();
 
-  const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -47,14 +39,14 @@ export default function AgentLoginPage() {
     e.preventDefault();
     setError('');
 
-    if (!isValidKenyanPhone(phone)) {
-      setError('Enter a valid Kenyan phone number, for example 0712 345 678.');
+    if (!isValidEmail(email)) {
+      setError('Enter a valid email address, for example agent@example.com.');
       return;
     }
 
     setSubmitting(true);
     try {
-      const { data, error: signInError } = await signInWithPhone(normalizeKenyanPhone(phone), password);
+      const { data, error: signInError } = await signInWithEmail(email.trim(), password);
       if (signInError) {
         setError(friendlyError(signInError));
         return;
@@ -97,7 +89,7 @@ export default function AgentLoginPage() {
         {/* -------------------------------- Form -------------------------------- */}
         <main className="-mt-6 flex flex-1 flex-col rounded-t-3xl bg-white px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-8 sm:mt-0 sm:flex-none sm:rounded-none sm:pt-6">
           <h1 className="text-2xl font-extrabold tracking-tight text-navy-900">Field agent sign in</h1>
-          <p className="mt-1.5 text-sm text-slate-500">Sign in with the phone number your administrator registered.</p>
+          <p className="mt-1.5 text-sm text-slate-500">Sign in with the email your administrator registered.</p>
 
           {error && (
             <div
@@ -111,20 +103,20 @@ export default function AgentLoginPage() {
 
           <form onSubmit={handleSubmit} className="mt-6 space-y-5" noValidate>
             <div>
-              <label htmlFor="phone" className="block text-sm font-semibold text-navy-900">
-                Phone number
+              <label htmlFor="email" className="block text-sm font-semibold text-navy-900">
+                Email
               </label>
               <div className="relative mt-1.5">
-                <Phone className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
+                <Mail className="pointer-events-none absolute left-4 top-1/2 size-5 -translate-y-1/2 text-slate-400" />
                 <input
-                  id="phone"
-                  type="tel"
-                  inputMode="tel"
-                  autoComplete="tel"
+                  id="email"
+                  type="email"
+                  inputMode="email"
+                  autoComplete="username"
                   required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="0712 345 678"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  placeholder="[you@example.com](mailto:you@example.com)"
                   className="w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-12 pr-4 text-base text-slate-900 placeholder:text-slate-400 focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-100"
                 />
               </div>
@@ -159,7 +151,7 @@ export default function AgentLoginPage() {
 
             <button
               type="submit"
-              disabled={submitting || !phone || !password}
+              disabled={submitting || !email || !password}
               className="flex w-full items-center justify-center gap-2 rounded-xl bg-brand-600 px-4 py-4 text-base font-bold text-white shadow-sm transition-colors hover:bg-navy-900 active:bg-navy-900 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-600"
             >
               {submitting && <Loader2 className="size-5 animate-spin" />}
