@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ChevronRight, Home, LogOut, MapPin, Search, X } from 'lucide-react';
 import { ROUTES } from '../../config/routes';
 import { useAuth } from '../../auth/AuthProvider';
-import AgentLayout from './AgentLayout';
+import AgentLayout from './Agentlayout';
 
 // Sample data. Replace with a Supabase fetch when your households table is ready.
 // Each item needs: id, name, area, meterNo, status ('due' | 'done').

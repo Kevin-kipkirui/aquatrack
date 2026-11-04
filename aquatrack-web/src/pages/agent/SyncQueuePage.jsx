@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { CircleCheck, CloudOff, Loader2, RefreshCw, TriangleAlert } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider';
 import { discardFromQueue, getHistory, getQueue, syncQueue } from '../../lib/syncQueue';
-import AgentLayout from './AgentLayout';
+import AgentLayout from './Agentlayout';
 
 const AUTO_SYNC_MS = 30000; // background check while the page is open and online
 

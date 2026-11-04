@@ -1,6 +1,6 @@
 import { LogOut, Mail, ShieldCheck, User } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider';
-import AgentLayout from './AgentLayout';
+import AgentLayout from './Agentlayout';
 
 export default function AgentProfilePage() {
   const { user, signOut } = useAuth();

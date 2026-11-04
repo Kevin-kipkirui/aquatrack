@@ -13,7 +13,7 @@ import {
 import { ROUTES } from '../../config/routes';
 import { useAuth } from '../../auth/AuthProvider';
 import { supabase } from '../../lib/supabase';
-import AgentLayout from './AgentLayout';
+import AgentLayout from './Agentlayout';
 
 // ---------------------------------------------------------------------------
 // Configuration
