@@ -57,15 +57,20 @@ export async function sendReading(reading, userId) {
   if (lookupError) throw lookupError;
 
   const flagged = (existing?.length ?? 0) > 0;
-  const { error: insertError } = await supabase.from('meter_readings').insert({
-    household_id: reading.householdId,
-    reading_value: reading.readingValue,
-    billing_period: reading.billingPeriod,
-    status: flagged ? 'flagged_duplicate' : 'pending_review',
-    captured_by: userId,
-  });
+  const { data: inserted, error: insertError } = await supabase
+    .from('meter_readings')
+    .insert({
+      household_id: reading.householdId,
+      reading_value: reading.readingValue,
+      billing_period: reading.billingPeriod,
+      status: flagged ? 'flagged_duplicate' : 'pending_review',
+      captured_by: userId,
+    })
+    .select('status')
+    .single();
   if (insertError) throw insertError;
-  return { flagged };
+  // The database also flags duplicates from other agents, which this agent cannot see.
+  return { flagged: flagged || inserted?.status === 'flagged_duplicate' };
 }
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
