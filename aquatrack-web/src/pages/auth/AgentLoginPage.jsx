@@ -5,6 +5,8 @@ import { useAuth } from '../../auth/AuthProvider';
 import { ROLES } from '../../config/roles';
 import { ROUTES } from '../../config/routes';
 
+const BRAND_IMAGE_URL = 'https://i.pinimg.com/736x/ac/c9/a6/acc9a6776c24d654abb99d4c81ed007e.jpg';
+
 function isValidEmail(input) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.trim());
 }
@@ -65,29 +67,48 @@ export default function AgentLoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen flex-col bg-navy-900 font-sans text-slate-800 sm:items-center sm:justify-center sm:bg-brand-50 sm:p-6">
-      <div className="flex w-full flex-1 flex-col overflow-hidden sm:max-w-md sm:flex-none sm:rounded-3xl sm:shadow-xl">
-        {/* ------------------------------- Header ------------------------------- */}
-        <header className="bg-navy-900 px-6 pb-14 pt-8 text-white">
+    // Phones: the page fills the whole screen (dynamic height, so browser toolbars don't cause gaps).
+    // Tablets and desktops: the same layout becomes a centred card.
+    <div className="flex min-h-screen min-h-[100dvh] flex-col bg-white font-sans text-slate-800 sm:items-center sm:justify-center sm:bg-brand-50 sm:p-6">
+      <div className="flex w-full flex-1 flex-col overflow-hidden bg-white sm:max-w-md sm:flex-none sm:rounded-3xl sm:shadow-xl">
+        {/* ------------------------------- Photo header ------------------------------- */}
+        <header className="relative isolate flex min-h-[34vh] min-h-[34dvh] flex-col justify-between overflow-hidden bg-navy-900 px-5 pb-12 pt-[max(1.25rem,env(safe-area-inset-top))] text-white sm:min-h-[280px] sm:px-8 sm:pt-6">
+          {/* Background photo: always fills the header. If it fails to load, the navy background remains. */}
+          <img
+            src={BRAND_IMAGE_URL}
+            alt=""
+            aria-hidden="true"
+            referrerPolicy="no-referrer"
+            onError={(e) => {
+              e.currentTarget.style.display = 'none';
+            }}
+            className="absolute inset-0 -z-20 h-full w-full object-cover object-[center_35%]"
+          />
+          {/* Dark overlay keeps the text readable while the photo still shows through. */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0 -z-10 bg-gradient-to-t from-navy-900/95 via-navy-900/55 to-navy-900/40"
+          />
+
           <Link
             to={ROUTES.gateway}
-            className="inline-flex items-center gap-1.5 rounded-lg py-1 text-sm font-medium text-brand-200 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
+            className="inline-flex w-fit items-center gap-1.5 rounded-lg py-1 text-sm font-medium text-white/90 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white"
           >
             <ArrowLeft className="size-4" />
             Back
           </Link>
 
-          <div className="mt-6 flex items-center gap-3">
-            <img src="/logo-mark.png" alt="" className="h-12 w-12 rounded-xl bg-white object-contain p-1.5" />
+          <div className="mt-8 flex items-center gap-3">
+            <img src="/logo-mark.png" alt="" className="h-12 w-12 shrink-0 rounded-xl bg-white object-contain p-1.5" />
             <div className="leading-tight">
-              <p className="text-2xl font-extrabold tracking-tight">AquaTrack</p>
+              <p className="text-2xl font-extrabold tracking-tight drop-shadow-md">AquaTrack</p>
               <p className="text-sm text-brand-200">Field agent</p>
             </div>
           </div>
         </header>
 
-        {/* -------------------------------- Form -------------------------------- */}
-        <main className="-mt-6 flex flex-1 flex-col rounded-t-3xl bg-white px-6 pb-[max(2rem,env(safe-area-inset-bottom))] pt-8 sm:mt-0 sm:flex-none sm:rounded-none sm:pt-6">
+        {/* ---------------------------------- Form ---------------------------------- */}
+        <main className="relative -mt-6 flex flex-1 flex-col rounded-t-3xl bg-white px-5 pb-[max(1.5rem,env(safe-area-inset-bottom))] pt-7 sm:px-8 sm:pb-8">
           <h1 className="text-2xl font-extrabold tracking-tight text-navy-900">Field agent sign in</h1>
           <p className="mt-1.5 text-sm text-slate-500">Sign in with the email your administrator registered.</p>
 
@@ -113,10 +134,13 @@ export default function AgentLoginPage() {
                   type="email"
                   inputMode="email"
                   autoComplete="username"
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  spellCheck={false}
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="[you@example.com](mailto:you@example.com)"
+                  placeholder="you@example.com"
                   className="w-full rounded-xl border border-slate-300 bg-white py-3.5 pl-12 pr-4 text-base text-slate-900 placeholder:text-slate-400 focus:border-brand-600 focus:outline-none focus:ring-4 focus:ring-brand-100"
                 />
               </div>
