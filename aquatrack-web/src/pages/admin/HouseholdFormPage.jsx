@@ -7,6 +7,7 @@ import {
   Gauge,
   Hash,
   Home,
+  Landmark,
   LayoutDashboard,
   Loader2,
   Lock,
@@ -35,11 +36,28 @@ import { supabase } from '../../lib/supabase';
 // Edit this list to match the rate categories your association uses.
 const RATE_CATEGORIES = ['Standard Residential', 'Commercial'];
 
+// The 11 constituencies of Nakuru County. Agents narrow down from these.
+const CONSTITUENCIES = [
+  'Bahati',
+  'Gilgil',
+  'Kuresoi North',
+  'Kuresoi South',
+  'Molo',
+  'Naivasha',
+  'Nakuru Town East',
+  'Nakuru Town West',
+  'Njoro',
+  'Rongai',
+  'Subukia',
+];
+
 const EMPTY_FORM = {
   owner: '',
   phone: '',
   meter: '',
-  section: '',
+  constituency: '',
+  area: '',
+  houseNumber: '',
   rate: RATE_CATEGORIES[0],
   opening: '0',
 };
@@ -57,6 +75,14 @@ function toLocalPhone(input) {
 // 0722445981 -> 0722 445 981
 function formatPhone(local) {
   return /^\d{10}$/.test(local) ? `${local.slice(0, 4)} ${local.slice(4, 7)} ${local.slice(7)}` : local;
+}
+
+// Trim and collapse spaces. If the area matches one already in use (ignoring case),
+// reuse that spelling so the agents' filter never splits one place into two.
+function cleanArea(input, knownAreas) {
+  const value = input.trim().replace(/\s+/g, ' ');
+  const match = knownAreas.find((a) => a.toLowerCase() === value.toLowerCase());
+  return match ?? value;
 }
 
 function inputClass(hasError) {
@@ -105,6 +131,7 @@ export default function HouseholdFormPage() {
   const [initial, setInitial] = useState(EMPTY_FORM);
   const [code, setCode] = useState('');
   const [lastReading, setLastReading] = useState(null);
+  const [knownAreas, setKnownAreas] = useState([]); // areas already in use, for suggestions
 
   const [loading, setLoading] = useState(isEdit);
   const [notFound, setNotFound] = useState(false);
@@ -129,6 +156,20 @@ export default function HouseholdFormPage() {
     { label: 'Settings', to: a.settings, icon: Settings },
   ];
 
+  // Areas already in use, so the admin picks the same spelling instead of retyping it.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase.rpc('households_list');
+      if (cancelled || !Array.isArray(data)) return;
+      const areas = [...new Set(data.map((h) => h.section).filter(Boolean))];
+      setKnownAreas(areas.sort((x, y) => x.localeCompare(y)));
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   // Load the household when editing; reset when switching to "new".
   useEffect(() => {
     setSaved(null);
@@ -150,6 +191,7 @@ export default function HouseholdFormPage() {
     (async () => {
       setLoading(true);
       const { data, error: rpcError } = await supabase.rpc('household_get', { p_id: householdId });
+      const { data: extra } = await supabase.rpc('household_details_get', { p_id: householdId });
       if (cancelled) return;
       if (rpcError) {
         if (rpcError.code === 'P0002' || /not found/i.test(rpcError.message)) setNotFound(true);
@@ -159,8 +201,10 @@ export default function HouseholdFormPage() {
           owner: data.owner ?? '',
           phone: data.phone ?? '',
           meter: data.meterNumber ?? '',
-          section: data.section ?? '',
-          rate: data.rateCategory || RATE_CATEGORIES[0],
+          constituency: extra?.constituency ?? '',
+          area: extra?.area ?? data.section ?? '',
+          houseNumber: extra?.houseNumber ?? '',
+          rate: extra?.rateCategory || data.rateCategory || RATE_CATEGORIES[0],
           opening: '0',
         };
         setForm(loaded);
@@ -190,7 +234,9 @@ export default function HouseholdFormPage() {
       errs.phone = 'Enter a valid Kenyan phone number, for example 0722 445 981.';
     }
     if (form.meter.trim().length < 3) errs.meter = 'Enter the meter number printed on the meter.';
-    if (!form.section.trim()) errs.section = 'Enter the section or block, for example Riverside Block C.';
+    if (!form.constituency) errs.constituency = 'Choose the constituency.';
+    if (!form.area.trim()) errs.area = 'Enter the village, estate or neighbourhood, for example Section 58.';
+    if (!form.houseNumber.trim()) errs.houseNumber = 'Enter the house number or address, for example House 14 or Plot 203.';
     if (!isEdit) {
       const opening = Number(form.opening);
       if (form.opening === '' || Number.isNaN(opening) || opening < 0) {
@@ -212,28 +258,48 @@ export default function HouseholdFormPage() {
     setSubmitting(true);
     const phone = formatPhone(toLocalPhone(form.phone));
     const meter = form.meter.trim().toUpperCase();
+    const area = cleanArea(form.area, knownAreas);
+    const houseNumber = form.houseNumber.trim().replace(/\s+/g, ' ');
 
     const { data, error: rpcError } = await supabase.rpc('household_save', {
       p_id: isEdit ? householdId : null,
       p_owner: form.owner.trim(),
       p_phone: phone,
       p_meter: meter,
-      p_section: form.section.trim(),
+      p_section: area,
       p_rate: form.rate,
       p_opening: isEdit ? null : Number(form.opening),
     });
-    setSubmitting(false);
 
     if (rpcError) {
+      setSubmitting(false);
       if (rpcError.code === '23505') setFieldErrors({ meter: rpcError.message });
       else setError(rpcError.message);
       return;
     }
 
-    const next = { ...form, phone, meter, owner: form.owner.trim(), section: form.section.trim() };
+    // Second step: the location fields and rate category.
+    const savedCode = data?.code ?? code;
+    const { error: detailsError } = await supabase.rpc('household_set_details', {
+      p_code: savedCode,
+      p_constituency: form.constituency,
+      p_area: area,
+      p_house_number: houseNumber,
+      p_rate_category: form.rate,
+    });
+    setSubmitting(false);
+    if (detailsError) {
+      setError(
+        `The household was saved as ${savedCode}, but its location and rate category were not: ${detailsError.message}`
+      );
+      return;
+    }
+
+    if (!knownAreas.includes(area)) setKnownAreas((list) => [...list, area].sort((x, y) => x.localeCompare(y)));
+    const next = { ...form, phone, meter, owner: form.owner.trim(), area, houseNumber };
     setForm(next);
     setInitial(next);
-    setSaved({ created: !isEdit, code: data?.code ?? code, skipped: data?.skipped ?? [] });
+    setSaved({ created: !isEdit, code: savedCode, skipped: data?.skipped ?? [] });
   }
 
   function addAnother() {
@@ -245,7 +311,8 @@ export default function HouseholdFormPage() {
   }
 
   const dirty = JSON.stringify(form) !== JSON.stringify(initial);
-  const requiredFilled = form.owner && form.phone && form.meter && form.section;
+  const requiredFilled =
+    form.owner && form.phone && form.meter && form.constituency && form.area && form.houseNumber;
   const canSubmit = !submitting && !loading && (isEdit ? dirty : requiredFilled);
   const rateOptions = RATE_CATEGORIES.includes(form.rate) ? RATE_CATEGORIES : [form.rate, ...RATE_CATEGORIES];
   const showSuccessCard = saved?.created;
@@ -536,19 +603,66 @@ export default function HouseholdFormPage() {
                       </div>
 
                       <div className="grid gap-5 sm:grid-cols-2">
-                        <Field id="section" label="Section / block" error={fieldErrors.section}>
+                        <Field id="constituency" label="Constituency" error={fieldErrors.constituency}>
+                          <Landmark className={ICON_CLASS} />
+                          <select
+                            id="constituency"
+                            required
+                            value={form.constituency}
+                            onChange={(e) => setField('constituency', e.target.value)}
+                            aria-invalid={Boolean(fieldErrors.constituency)}
+                            aria-describedby="constituency-message"
+                            className={inputClass(fieldErrors.constituency)}
+                          >
+                            <option value="">Select constituency</option>
+                            {CONSTITUENCIES.map((c) => (
+                              <option key={c} value={c}>{c}</option>
+                            ))}
+                          </select>
+                        </Field>
+
+                        <Field
+                          id="area"
+                          label="Village / estate"
+                          error={fieldErrors.area}
+                          hint={knownAreas.length > 0 ? 'Pick an existing one from the list so spellings match.' : undefined}
+                        >
                           <MapPin className={ICON_CLASS} />
                           <input
-                            id="section"
+                            id="area"
+                            type="text"
+                            list="known-areas"
+                            autoComplete="off"
+                            required
+                            value={form.area}
+                            onChange={(e) => setField('area', e.target.value)}
+                            placeholder="Section 58"
+                            aria-invalid={Boolean(fieldErrors.area)}
+                            aria-describedby="area-message"
+                            className={inputClass(fieldErrors.area)}
+                          />
+                          <datalist id="known-areas">
+                            {knownAreas.map((a2) => (
+                              <option key={a2} value={a2} />
+                            ))}
+                          </datalist>
+                        </Field>
+                      </div>
+
+                      <div className="grid gap-5 sm:grid-cols-2">
+                        <Field id="houseNumber" label="House number / address" error={fieldErrors.houseNumber}>
+                          <Home className={ICON_CLASS} />
+                          <input
+                            id="houseNumber"
                             type="text"
                             autoComplete="off"
                             required
-                            value={form.section}
-                            onChange={(e) => setField('section', e.target.value)}
-                            placeholder="Riverside Block C"
-                            aria-invalid={Boolean(fieldErrors.section)}
-                            aria-describedby="section-message"
-                            className={inputClass(fieldErrors.section)}
+                            value={form.houseNumber}
+                            onChange={(e) => setField('houseNumber', e.target.value)}
+                            placeholder="House 14"
+                            aria-invalid={Boolean(fieldErrors.houseNumber)}
+                            aria-describedby="houseNumber-message"
+                            className={inputClass(fieldErrors.houseNumber)}
                           />
                         </Field>
 
@@ -634,7 +748,8 @@ export default function HouseholdFormPage() {
                 <ul className="mt-4 space-y-4 text-sm text-slate-700">
                   {[
                     ['Household ID', 'Generated automatically in the form NRA-0001, so IDs never clash.'],
-                    ['Meter number', 'Field agents identify a household by it, so one meter can’t belong to two households.'],
+                    ['Location', 'Constituency, village or estate, then house number. Field agents narrow down through these to find the household, so spell each place the same way every time.'],
+                    ['Meter number', 'Field agents can also search by it directly, so one meter can’t belong to two households.'],
                     ['Opening reading', 'A household’s first bill is (first approved reading − opening reading) × the billing rate.'],
                     ['Rate category', 'Recorded on the household. Bills currently use the association’s configured rate, whatever the category.'],
                   ].map(([title, text]) => (

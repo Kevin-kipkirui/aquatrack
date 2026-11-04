@@ -13,6 +13,7 @@ import {
 import { ROUTES } from '../../config/routes';
 import { useAuth } from '../../auth/AuthProvider';
 import { supabase } from '../../lib/supabase';
+import { fetchAgentHouseholds, getCachedHouseholds } from '../../lib/agentHouseholds';
 import AgentLayout from './Agentlayout';
 
 // ---------------------------------------------------------------------------
@@ -20,19 +21,6 @@ import AgentLayout from './Agentlayout';
 // ---------------------------------------------------------------------------
 // Consumption above this many units gets a "please re-check the meter" warning.
 const HIGH_USAGE_UNITS = 100;
-
-// Sample data. Replace with a Supabase fetch of the `households` table.
-// Same shape as the list on the Households page, plus owner and previousReading.
-const SAMPLE_HOUSEHOLDS = {
-  1: {
-    id: '1',
-    name: 'Sample household 1',
-    owner: 'Sample Owner',
-    area: 'Section 58, Nakuru',
-    meterNo: 'M-0001',
-    previousReading: 1250,
-  },
-};
 
 // ---------------------------------------------------------------------------
 // Local-first storage (the "sync queue" described in the system design).
@@ -112,6 +100,18 @@ async function sendReading(reading, userId) {
   return { flagged };
 }
 
+// Shape the capture screen expects.
+function toCaptureShape(h) {
+  return {
+    id: h.id,
+    name: [h.houseNumber, h.area].filter(Boolean).join(', ') || h.code || h.owner,
+    owner: h.owner,
+    area: [h.area, h.constituency].filter(Boolean).join(', '),
+    meterNo: h.meterNo,
+    previousReading: Number(h.previousReading ?? 0),
+  };
+}
+
 function isNetworkError(err) {
   const msg = (err?.message || '').toLowerCase();
   return msg.includes('failed to fetch') || msg.includes('network') || err?.status === 0;
@@ -126,7 +126,32 @@ export default function CaptureReadingPage() {
   const { user } = useAuth();
   const online = useOnlineStatus();
 
-  const household = SAMPLE_HOUSEHOLDS[householdId];
+  // Same list the Households page uses: cached on the phone, refreshed when online.
+  const [household, setHousehold] = useState(() => {
+    const found = getCachedHouseholds().find((h) => h.id === householdId);
+    return found ? toCaptureShape(found) : null;
+  });
+  const [lookingUp, setLookingUp] = useState(!household);
+
+  useEffect(() => {
+    if (household || !online) {
+      setLookingUp(false);
+      return undefined;
+    }
+    let cancelled = false;
+    fetchAgentHouseholds()
+      .then((list) => {
+        const found = list.find((h) => h.id === householdId);
+        if (!cancelled && found) setHousehold(toCaptureShape(found));
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLookingUp(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [householdId, household, online]);
   const billingPeriod = useMemo(currentBillingPeriod, []);
 
   const [reading, setReading] = useState('');
@@ -218,6 +243,14 @@ export default function CaptureReadingPage() {
   }
 
   // ---- Household not found --------------------------------------------------
+  if (!household && lookingUp) {
+    return renderShell(
+      <p className="flex items-center gap-2 text-sm text-slate-500">
+        <Loader2 className="size-4 animate-spin" /> Loading household…
+      </p>,
+    );
+  }
+
   if (!household) {
     return renderShell(
       <>

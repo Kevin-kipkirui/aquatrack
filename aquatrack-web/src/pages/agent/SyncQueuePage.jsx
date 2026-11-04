@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { CircleCheck, CloudOff, Loader2, RefreshCw, TriangleAlert } from 'lucide-react';
 import { useAuth } from '../../auth/AuthProvider';
 import { discardFromQueue, getHistory, getQueue, syncQueue } from '../../lib/syncQueue';
+import { getCachedHouseholds, householdLabel } from '../../lib/agentHouseholds';
 import AgentLayout from './Agentlayout';
 
 const AUTO_SYNC_MS = 30000; // background check while the page is open and online
@@ -43,6 +44,7 @@ export default function SyncQueuePage() {
 
   const [items, setItems] = useState([]);
   const [syncing, setSyncing] = useState(false);
+  const [households] = useState(() => new Map(getCachedHouseholds().map((h) => [h.id, h])));
 
   const refresh = useCallback(() => {
     const all = [...getQueue(), ...getHistory()];
@@ -152,7 +154,11 @@ export default function SyncQueuePage() {
               <li key={item.localId} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm lg:p-5">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="truncate text-base font-bold text-navy-900">Household {item.householdId}</p>
+                    <p className="truncate text-base font-bold text-navy-900">
+                      {households.has(item.householdId)
+                        ? householdLabel(households.get(item.householdId))
+                        : `Household ${item.householdId}`}
+                    </p>
                     <p className="mt-0.5 text-xs text-slate-500">
                       Reading {Number(item.readingValue).toLocaleString()} · {formatPeriod(item.billingPeriod)}
                     </p>
