@@ -281,7 +281,8 @@ export default function HouseholdFormPage() {
     // Second step: the location fields and rate category.
     const savedCode = data?.code ?? code;
     const { error: detailsError } = await supabase.rpc('household_set_details', {
-      p_code: savedCode,
+      p_id: isEdit ? householdId : null,
+      p_meter: meter,
       p_constituency: form.constituency,
       p_area: area,
       p_house_number: houseNumber,
@@ -290,7 +291,7 @@ export default function HouseholdFormPage() {
     setSubmitting(false);
     if (detailsError) {
       setError(
-        `The household was saved as ${savedCode}, but its location and rate category were not: ${detailsError.message}`
+        `The household was saved${savedCode ? ` as ${savedCode}` : ''}, but its location and rate category were not: ${detailsError.message}`
       );
       return;
     }
